@@ -16,6 +16,7 @@ conf/
 *.csv
 *.npy
 *.npz
+*.egg-info/
 
 # Documentation & Utility Scripts (Local Only)
 CHANGELOG_PERSONAL.md
