@@ -1,4 +1,10 @@
 # DISK (Deep Imputation of SKeleton data)
+**Personal fork for custom applications and modifications**
+
+> 🔗 **Original Repository**: [bozeklab/DISK](https://github.com/bozeklab/DISK)  
+> 📝 **Original Authors**: France Rose, Claire Wyart, and the Boze Lab team  
+> This is a personalized fork with custom modifications and applications.
+
 Neural network method to impute missing values for 3D skeleton data.
 ![Examples of imputations](images/reconstructions_whitebg-1.png)
 Example of imputations: blue lines are the original signal, red dots represent the imputation done by a transformer model, and the gray line the linear interpolation.

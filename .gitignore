@@ -3,9 +3,27 @@
 outputs/
 models/
 datasets/
+behavior_data/
+data/
 .ipynb_checkpoints/
 DISK/conf
 __pychache__/
 conf/
 .yaml
 .gitignore
+*.mat
+*.h5
+*.csv
+*.npy
+*.npz
+
+# Documentation & Utility Scripts (Local Only)
+CHANGELOG_PERSONAL.md
+DETAILED_FILE_SPECIFICATIONS.md
+FL2_DATASET_GUIDE.md
+FL2_QUICKSTART.md
+GIT_WORKFLOW.md
+GITIGNORE_GUIDE.md
+BOGNA_MOCAP_DATASET_OVERVIEW.md
+generate_detailed_specs.py
+.github/
