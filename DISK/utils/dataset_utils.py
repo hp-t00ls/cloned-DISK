@@ -187,7 +187,7 @@ class ParentDataset(data.Dataset):
         logging.debug(f'[DEBUG __getitem__] self.transform={self.transform}')
 
         try:
-            if len(x_supp) > 0:
+            if x_supp is not None and len(x_supp) > 0:
                 # normally sequence without additional holes but after the other transforms
                 output['x_supp'] = torch.from_numpy(x_supp[0]).type(torch.float)
                 # can be none or the original sample without holes
