@@ -129,6 +129,7 @@ class ParentDataset(data.Dataset):
                             'skeleton_graph': self.skeleton_graph})
         ## allowed transforms: rotation, translation, reflection, small gaussian noise on positions
         x_supp = None
+        logging.debug("X_supp initialized to None")
         if self.transform is not None and len(self.transform) > 0:
             # x has nans here
             x_coordinates, x_supp, self.kwargs = transform_x(x_coordinates, self.transform, **self.kwargs)
@@ -182,17 +183,26 @@ class ParentDataset(data.Dataset):
             output['VI_angle'] = torch_angle
             output['VI_barycenter'] = torch_barycenter
 
-        if len(x_supp) > 0:
-            # normally sequence without additional holes but after the other transforms
-            output['x_supp'] = torch.from_numpy(x_supp[0]).type(torch.float)
-            # can be none or the original sample without holes
-            ## FR: maybe not the best, but haven't found any better yet
-            if len(x_supp) == 2:
-                output['x_swap'] = torch.from_numpy(x_supp[1]).type(torch.float)
-                output['swap'] = sample['swap']
-            else:
-                output['x_swap'] = torch.from_numpy(np.zeros_like(x_supp[0])).type(torch.float)
-                output['swap'] = sample['swap']
+        logging.debug(f'[DEBUG __getitem__] index={index}, x_supp type={type(x_supp)}, x_supp value={x_supp}')
+        logging.debug(f'[DEBUG __getitem__] self.transform={self.transform}')
+
+        try:
+            if len(x_supp) > 0:
+                # normally sequence without additional holes but after the other transforms
+                output['x_supp'] = torch.from_numpy(x_supp[0]).type(torch.float)
+                # can be none or the original sample without holes
+                ## FR: maybe not the best, but haven't found any better yet
+                if len(x_supp) == 2:
+                    output['x_swap'] = torch.from_numpy(x_supp[1]).type(torch.float)
+                    output['swap'] = sample['swap']
+                else:
+                    output['x_swap'] = torch.from_numpy(np.zeros_like(x_supp[0])).type(torch.float)
+                    output['swap'] = sample['swap']
+        except TypeError as e:
+            logging.critical(f"BUG: x_supp is None when it should be a tuple! = {e}")
+            raise TypeError(f"[BUG DETECTED at index {index}] Crash when evaluating len(x_supp). "
+                            f"x_supp={x_supp}, type={type(x_supp)}, transform={self.transform}. "
+                            f"Original error: {e}") from e
 
         if 'i_file' in sample.keys():
             output['indices_file'] = sample['i_file']

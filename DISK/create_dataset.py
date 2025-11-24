@@ -18,6 +18,11 @@ def chop_coordinates_in_timeseries(time_vect: np.array,
                                    length: int = 1,
                                    th_std: float = 0):
     """
+    Chop the coordinates into sequences of fixed length, with a given stride.
+        1. Find segments of continuous timepoints (no gaps larger than 1 timepoint)
+        2. In these segments, chop sequences of fixed length with given stride
+        3. Optionally, remove sequences that are too flat (std below a given threshold)
+        4. Return the chopped sequences, their lengths and starting timepoints
 
     :param time_vect: 1D numpy array
     :param coordinates: 3D numpy array (timepoints, keypoints, 3)
@@ -32,23 +37,26 @@ def chop_coordinates_in_timeseries(time_vect: np.array,
     times: 1D numpy array of the starting timepoint of these sequences
     """
 
-    breakpoints = np.where(np.diff(list(time_vect)) > 1)[0]
+    breakpoints = np.where(np.diff(list(time_vect)) > 1)[0] # find gaps in the time vector that are larger than 1 timepoint 
     breakpoints = np.insert(breakpoints, 0, 0)  # add first point = index 0
     breakpoints = np.insert(breakpoints, len(breakpoints),
                             len(time_vect))  # add last point = index len of the vector
-    good_segments = np.where(np.diff(breakpoints) >= length)[0]  # is the segment longer than our lower bound
+    good_segments = np.where(np.diff(breakpoints) >= length)[0]  # is the segment longer than our lower bound ?
+    # good_segments gives the indices of the segments that are long enough
     dataset = []
     lengths = []
     times = []
     if len(good_segments) == 0:
         logging.debug('No long enough segments.')
-    for index_good_segment in good_segments:
-        data = coordinates[breakpoints[index_good_segment] + 1: breakpoints[index_good_segment + 1]]
+    for index_good_segment in good_segments: 
+        data = coordinates[breakpoints[index_good_segment] + 1: breakpoints[index_good_segment + 1]] 
 
         i = 0
         while len(data) - i * stride > length:
             subdata = data[int(i * stride): int(i * stride) + length, ...]
-            sub_std = np.max(np.mean(np.std(subdata, axis=0), 1))
+            sub_std = np.max(np.mean(np.std(subdata, axis=0), 1)) # in every segment, compute the maximum of the mean std over keypoints
+            #  axis 0 is time, axis 1 is keypoints, axis 2 is coordinates
+            # So we compute std over time (axis 0), then mean over keypoints (axis 1), then max over coordinates (axis 2)
             if th_std == 0 or (th_std > 0 and sub_std > th_std):
                 times.append(time_vect[breakpoints[index_good_segment] + 1 + int(i * stride)])
                 lengths.append(length)
@@ -102,7 +110,7 @@ def open_and_extract_data(f, file_type, dlc_likelihood_threshold):
     elif file_type == 'mat_qualisys':
         # for in house mouse data, QUALISYS software
         mat = scipy.io.loadmat(f)
-        exp_name = [m for m in mat.keys() if m[:2] != '__'][0]  ## TOCHANGE
+        exp_name = [m for m in mat.keys() if m[:2] != '__'][0]  ## TOCHANGE because different experiments have different names 
         data = np.moveaxis(mat[exp_name][0, 0]['Trajectories'][0, 0]['Labeled']['Data'][0, 0],
                            2, 0)
         keypoints = [label[0].replace('coordinate', 'coord') for label in
@@ -220,7 +228,7 @@ def open_and_extract_data(f, file_type, dlc_likelihood_threshold):
     return data, keypoints
 
 
-@hydra.main(version_base=None, config_path="conf", config_name="conf_create_dataset")
+@hydra.main(version_base=None, config_path="conf", config_name="conf_create_dataset_FL2")
 def create_dataset(_cfg: DictConfig) -> None:
     basedir = hydra.utils.get_original_cwd()
     logging.info(f'[BASEDIR] {basedir}')
@@ -344,7 +352,7 @@ def create_dataset(_cfg: DictConfig) -> None:
 
         # logging.info(f'Timepoint with at least one missing: {np.sum(nb_nans_per_timestep > 0)} / {len(data)}')
 
-        for nb_allowed_nans, nan_name in zip(nan_modalities, nan_modalities_names):
+        for nb_allowed_nans, nan_name in zip(nan_modalities, nan_modalities_names): # zip([0, 1, np.inf], ['0', '1', 'all'])
 
             # if in subset_columns there are some keypoints then one keypoint's coordinates are spread in 3 columns
             mask_rows = nb_nans_per_timestep <= nb_allowed_nans

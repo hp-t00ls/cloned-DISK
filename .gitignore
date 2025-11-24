@@ -29,3 +29,5 @@ BOGNA_MOCAP_OVERVIEW.md
 generate_detailed_specs.py
 results/
 .github/
+DISK/utils/logging_demo.py
+DISK/sjyk.py

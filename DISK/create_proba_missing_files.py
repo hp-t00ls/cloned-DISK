@@ -18,20 +18,22 @@ from DISK.utils.transforms import AddMissing_LengthProba
 
 def create_uniform_proba(min_len, max_len, keypoints):
     assert 0 < min_len < max_len
-    lengths = np.arange(min_len, max_len).astype('int')
-    proba = np.ones(lengths.shape[0], dtype='float') / len(lengths)
+    lengths = np.arange(min_len, max_len).astype('int') # possible lengths
+    proba = np.ones(lengths.shape[0], dtype='float') / len(lengths) # uniform proba over lengths
     dfs = []
-    for k in keypoints + ['non_missing']:
+    for k in keypoints + ['non_missing']: # including non_missing whhich represents all keypoints present
         dfs.append(pd.DataFrame(columns=['original', 'keypoint', 'length', 'proba'],
                           data=np.vstack([[True] * len(lengths), [k] * len(lengths), lengths, proba]).T))
     df_proba_init = pd.DataFrame(columns=['keypoint', 'proba'],
                                  data=np.vstack([keypoints + ['non_missing'], [1 / len(keypoints)] * len(keypoints) + [0]]).T)
     return pd.concat(dfs).reset_index().drop('index', axis=1), df_proba_init
 
-
 @hydra.main(version_base=None, config_path="conf", config_name="conf_proba_missing_files")
 def create_proba_missing_files(_cfg: DictConfig) -> None:
     """Check if the artificial missing coordinates match the original coordinates"""
+
+    logging.getLogger().setLevel(logging.DEBUG)
+
     basedir = hydra.utils.get_original_cwd()
     logging.info(f'[BASEDIR] {basedir}')
     """ LOGGING AND PATHS """
@@ -46,7 +48,7 @@ def create_proba_missing_files(_cfg: DictConfig) -> None:
         raise ValueError(f'no constant file found in', constant_file_path)
     dataset_constants = read_constant_file(constant_file_path)
 
-    suffix = f'_set_keypoints' if not _cfg.indep_keypoints else ''
+    suffix = f'_set_keypoints' if not _cfg.indep_keypoints else '' # suffix for the output files to distinguish the different settings
     if _cfg.indep_keypoints:
         if _cfg.merge_keypoints:
             logging.info(f'merge_keypoints = True is not a valid option when indep_keypoints = True. '
@@ -59,6 +61,9 @@ def create_proba_missing_files(_cfg: DictConfig) -> None:
         if not initial:
             length_proba_df = pd.read_csv(os.path.join(outputdir, f'proba_missing_length{suffix}.csv'))
             init_proba = pd.read_csv(os.path.join(outputdir, f'proba_missing{suffix}.csv'))
+            logging.info("Proba files are generated,\n"
+            "- proba_missing_length{suffix}.csv - probability distribution of missing segment lengths per keypoint\n"
+            "- proba_missing{suffix}.csv - initial probability of each keypoint being missing")
             # n_proba = pd.read_csv('/home/france/Mounted_dir/results_behavior/datasets/proba_n_missing_1_6.txt',
             #                       header=None)
 
@@ -69,6 +74,7 @@ def create_proba_missing_files(_cfg: DictConfig) -> None:
                                                           pad=(0, 0), verbose=0, proba=1)
             transform = [addmissing_transform]
         else:
+            logging.info("First iteration: we collect all original missing data from the dataset and record which keypoints are missing and for how long")
             transform = None
 
         train_dataset, val_dataset, test_dataset = load_datasets(dataset_name=_cfg.dataset_name,
@@ -82,6 +88,15 @@ def create_proba_missing_files(_cfg: DictConfig) -> None:
                                                                  verbose=0)
 
         train_loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
+
+        logging.info(f'Datasets loaded successfully')
+        logging.info(f'  - Train dataset size: {len(train_dataset)}')
+        logging.info(f'  - Val dataset size: {len(val_dataset)}')
+        logging.info(f'  - Test dataset size: {len(test_dataset)}')
+        logging.info(f'  - Initial iteration: {initial}')
+        logging.info(f'  - Transform applied: {transform is not None}')
+        logging.info(f'Starting to process train data with {len(train_dataset)} samples...')
+
 
         df = pd.DataFrame(columns=['index_sample', 'length', 'keypoint', 'original'])
         i_data = 0
@@ -259,6 +274,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG,
                         format=f'[%(levelname)s][%(asctime)s] %(message)s',
                         datefmt='%d-%b-%y %H:%M:%S')
+    
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("numpy").setLevel(logging.WARNING)
 
