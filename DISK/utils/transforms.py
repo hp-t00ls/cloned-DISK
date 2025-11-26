@@ -329,6 +329,11 @@ class NormalizeCube(Transform):
     def __call__(self, x, *args, x_supp=(), **kwargs):
         """Compute the transform"""
         # x of shape (time points, keypoints,  3)
+
+        if not isinstance(x, np.ndarray):
+            raise TypeError(f"[NormalizeCube] Expected x to be numpy.ndarray, got {type(x)}")  # FIX: Changed from [NormalizeCube]
+        
+
         max_ = np.nanmax(x, axis=(0, 1))  # should be of shape 3 (for the x, y, and z axes)
         min_ = np.nanmin(x, axis=(0, 1))  # same
         amplitude = np.max(max_ - min_)  # same for every axis
@@ -397,6 +402,10 @@ class Normalize(Transform):
     def __call__(self, x, *args, x_supp=(), **kwargs):
         """Compute the transform"""
         # x of shape (time points, keypoints,  3)
+
+        if not isinstance(x, np.ndarray):
+            raise TypeError(f"[Normalize] Expected x to be numpy.ndarray, got {type(x)}")  # FIX: Changed from [NormalizeCube]
+        
         max_ = np.nanmax(x, axis=(0, 1))  # should be of shape 3 (for the x, y, and z axes)
         min_ = np.nanmin(x, axis=(0, 1))  # same
         kwargs['min_sample'] = min_
@@ -485,7 +494,7 @@ class Swap2Kp(Transform):
         if len(x_supp) > 1:
             raise Warning('[TRANSFORMS][]SWAP2KP] x_supp is longer than expected')
         elif len(x_supp) > 0:
-            x_supp_prime = [x_supp[0]]
+            x_supp_prime = []
             yy = np.array(x_supp[0])
             yy[start_index: start_index + length, rd_kps[0]] = np.array(x_supp[0][start_index: start_index + length, rd_kps[1]])
             yy[start_index: start_index + length, rd_kps[1]] = np.array(x_supp[0][start_index: start_index + length, rd_kps[0]])
@@ -622,26 +631,28 @@ class AddMissing_LengthProba(Transform):
 
 def transform_x(x, transformations, **kwargs):
     '''
-
     :param x: can have nan in the places where coordinates is missing
     :param transformations:
     :param kwargs:
     :return:
     '''
+    # If AddMissing_LengthProba is the first transform we want to keep a copy of the original
+    if len(transformations) == 0:
+        return x, (), kwargs
+
+    start_idx = 0
     if isinstance(transformations[0], AddMissing_LengthProba):
-        x_supp = (np.copy(x),)  # the supp sample is the one without holes, but other reflection, normalization, ...
-        # will be computed on x and applied both on x_gt and x
-        x = transformations[0](x, **kwargs)  # the main sample is the one with holes
-        # in the case, where no hole is added, x is original x, and x_gt is None
+        x_supp = (np.copy(x),)
+        # AddMissing returns x with holes (single array), not (x, x_supp, kwargs)
+        x = transformations[0](x, **kwargs)
+        start_idx = 1
     else:
         x_supp = ()
-        x = transformations[0](x, **kwargs)
+        # don't call the first transform here; we'll iterate below to uniformly unpack
 
-    for t in transformations[1:]:
-        if isinstance(t, Swap2Kp):
-            x, x_supp, kwargs = t(x, x_supp=x_supp, **kwargs)
-        else:
-            x, x_supp, kwargs = t(x, x_supp=x_supp, **kwargs)
+    # Apply remaining transforms (or all transforms if first wasn't AddMissing)
+    for t in transformations[start_idx:]:
+        x, x_supp, kwargs = t(x, x_supp=x_supp, **kwargs)
 
     return x, x_supp, kwargs
 

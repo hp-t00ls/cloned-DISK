@@ -129,7 +129,7 @@ class ParentDataset(data.Dataset):
                             'skeleton_graph': self.skeleton_graph})
         ## allowed transforms: rotation, translation, reflection, small gaussian noise on positions
         x_supp = None
-        logging.debug("X_supp initialized to None")
+        # logging.debug("X_supp initialized to None")
         if self.transform is not None and len(self.transform) > 0:
             # x has nans here
             x_coordinates, x_supp, self.kwargs = transform_x(x_coordinates, self.transform, **self.kwargs)
@@ -183,8 +183,8 @@ class ParentDataset(data.Dataset):
             output['VI_angle'] = torch_angle
             output['VI_barycenter'] = torch_barycenter
 
-        logging.debug(f'[DEBUG __getitem__] index={index}, x_supp type={type(x_supp)}, x_supp value={x_supp}')
-        logging.debug(f'[DEBUG __getitem__] self.transform={self.transform}')
+        # logging.debug(f'[DEBUG __getitem__] index={index}, x_supp type={type(x_supp)}, x_supp value={x_supp}')
+        # logging.debug(f'[DEBUG __getitem__] self.transform={self.transform}')
 
         try:
             if x_supp is not None and len(x_supp) > 0:
